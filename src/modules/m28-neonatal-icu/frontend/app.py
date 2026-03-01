@@ -4,8 +4,8 @@ frontend/app.py
 Module 28 — Neonatal ICU Monitoring System
 Main Streamlit entrypoint.
 
-Run from the module root:
-    streamlit run frontend/app.py
+Run from the project root:
+    streamlit run src/modules/m28-neonatal-icu/frontend/app.py
 
 Tabs
 ────
@@ -18,16 +18,17 @@ Tabs
 
 from __future__ import annotations
 
+# ── Fix sys.path FIRST — before any local imports ─────────────────────────────
 import sys
 from pathlib import Path
 
+_MODULE_ROOT = Path(__file__).resolve().parents[1]  # …/m28-neonatal-icu/
+if str(_MODULE_ROOT) not in sys.path:
+    sys.path.insert(0, str(_MODULE_ROOT))
+# ─────────────────────────────────────────────────────────────────────────────
+
 import pandas as pd
 import streamlit as st
-
-# ── Ensure module root is on sys.path ─────────────────────────────────────────
-MODULE_ROOT = Path(__file__).resolve().parents[1]
-if str(MODULE_ROOT) not in sys.path:
-    sys.path.insert(0, str(MODULE_ROOT))
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(

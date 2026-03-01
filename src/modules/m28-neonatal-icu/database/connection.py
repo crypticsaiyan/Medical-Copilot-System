@@ -4,13 +4,7 @@ database/connection.py
 Module 28 — Neonatal ICU Monitoring System
 
 Singleton MongoDB connection for the NICU module.
-
-Usage
------
-    from database.connection import db, get_collection
-
-The module resolves the .env file by walking up from this file's
-location so you can run scripts from any working directory.
+Resolves the .env file relative to THIS file so cwd doesn't matter.
 """
 
 import os
@@ -21,13 +15,14 @@ from dotenv import load_dotenv
 from pymongo import MongoClient
 from pymongo.errors import ConnectionFailure, ConfigurationError
 
-# ── Locate and load .env ──────────────────────────────────────────────────────
-# Priority: look for .env in the module root first, then the project root.
+# ── Locate and load .env (always relative to this file) ──────────────────────
 _MODULE_ROOT = Path(__file__).resolve().parents[1]   # m28-neonatal-icu/
-_PROJECT_ROOT = Path(__file__).resolve().parents[4]  # Medical-Copilot-System/
+_local_env   = _MODULE_ROOT / ".env"
 
-load_dotenv(_MODULE_ROOT / ".env")          # module-local .env (preferred)
-load_dotenv(_PROJECT_ROOT / ".env", override=False)  # repo-root fallback
+if _local_env.exists():
+    load_dotenv(_local_env)
+else:
+    load_dotenv()   # fallback: walk upward until a .env is found
 
 # ── Read config ───────────────────────────────────────────────────────────────
 MONGO_URI: str = os.getenv("MONGO_URI", "mongodb://localhost:27017")
@@ -54,11 +49,11 @@ except (ConnectionFailure, ConfigurationError) as exc:
 db = _client[DB_NAME]
 
 # ── Named collection handles (used by backend modules) ───────────────────────
-neonates_col         = db["neonates"]
-admissions_col       = db["nicu_admissions"]
-observations_col     = db["nurse_observations"]
-devices_col          = db["monitoring_devices"]
-vital_signs_col      = db["vital_signs_records"]
+neonates_col      = db["neonates"]
+admissions_col    = db["nicu_admissions"]
+observations_col  = db["nurse_observations"]
+devices_col       = db["monitoring_devices"]
+vital_signs_col   = db["vital_signs_records"]
 
 
 def get_collection(name: str):
