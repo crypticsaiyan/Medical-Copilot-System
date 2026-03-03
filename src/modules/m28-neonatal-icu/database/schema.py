@@ -18,7 +18,7 @@ Collections created / validated
 from __future__ import annotations
 
 from pymongo.database import Database
-from pymongo.errors import CollectionInvalid
+from pymongo.errors import CollectionInvalid, OperationFailure
 
 # ── Per-collection $jsonSchema validators ─────────────────────────────────────
 
@@ -204,16 +204,22 @@ def apply_schemas(database: Database, *, verbose: bool = True) -> None:
             except CollectionInvalid:
                 pass  # Race condition — another process created it first
         else:
-            # Update validator on existing collection via collMod
-            database.command(
-                "collMod",
-                col_name,
-                validator={"$jsonSchema": validator["$jsonSchema"]},
-                validationLevel="moderate",   # Moderate: validates new/updated docs only
-                validationAction="warn",      # Warn instead of reject — safer for demos
-            )
-            if verbose:
-                print(f"  [schema] 🔄  Updated validator on existing '{col_name}'")
+            # Try to update the validator on existing collections via collMod.
+            # Atlas free-tier / restricted users may not have this privilege —
+            # in that case we silently skip (validator was already set at creation).
+            try:
+                database.command(
+                    "collMod",
+                    col_name,
+                    validator={"$jsonSchema": validator["$jsonSchema"]},
+                    validationLevel="moderate",
+                    validationAction="warn",
+                )
+                if verbose:
+                    print(f"  [schema] 🔄  Updated validator on existing '{col_name}'")
+            except OperationFailure:
+                if verbose:
+                    print(f"  [schema] ℹ️   '{col_name}' exists — collMod skipped (validator set at creation)")
 
     # Ensure compound indexes useful for DBMS joins / aggregation
     _create_indexes(database, verbose=verbose)
