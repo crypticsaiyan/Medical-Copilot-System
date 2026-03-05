@@ -137,17 +137,20 @@ with tab_admit:
 
     with col_right:
         st.subheader("📋 Active Admissions (with $lookup join)")
-        rows, pipeline = neonate_admission_join_view()
-        show_raw_query(pipeline, "🔍 Aggregation Pipeline: Neonate–Admission JOIN")
-        if rows:
-            df = pd.DataFrame(rows)
-            display_cols = [c for c in [
-                "neonate_name", "bed_no", "diagnosis", "gestational_age_weeks",
-                "birth_weight_g", "admission_id", "neonate_id",
-            ] if c in df.columns]
-            st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
-        else:
-            st.info("No active admissions.")
+        try:
+            rows, pipeline = neonate_admission_join_view()
+            show_raw_query(pipeline, "🔍 Aggregation Pipeline: Neonate–Admission JOIN")
+            if rows:
+                df = pd.DataFrame(rows)
+                display_cols = [c for c in [
+                    "neonate_name", "bed_no", "diagnosis", "gestational_age_weeks",
+                    "birth_weight_g", "admission_id", "neonate_id",
+                ] if c in df.columns]
+                st.dataframe(df[display_cols], use_container_width=True, hide_index=True)
+            else:
+                st.info("No active admissions.")
+        except Exception as e:
+            st.error(f"Query error: {e}")
 
 # ─── Tabs 2–4: need a patient selected ───────────────────────────────────────
 with tab_vitals:

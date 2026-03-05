@@ -167,7 +167,7 @@ def neonate_admission_join_view() -> tuple[list[dict], list[dict]]:
                 "as":           "neonate_info",
             }
         },
-        {"$unwind": {"path": "$neonate_info", "preserveNullAndEmpty": True}},
+        {"$unwind": {"path": "$neonate_info", "preserveNullAndEmptyArrays": True}},
         {
             "$project": {
                 "_id":           0,
