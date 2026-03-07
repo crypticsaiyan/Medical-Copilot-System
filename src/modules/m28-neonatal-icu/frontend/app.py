@@ -154,19 +154,19 @@ with tab_admit:
 
 # ─── Tabs 2–4: need a patient selected ───────────────────────────────────────
 with tab_vitals:
-    admission_id_v, _ = render_patient_selector()
+    admission_id_v, _ = render_patient_selector(tab_key="vitals")
     if admission_id_v:
         st.markdown("---")
         render_vitals_chart(admission_id_v)
 
 with tab_obs:
-    admission_id_o, _ = render_patient_selector()
+    admission_id_o, _ = render_patient_selector(tab_key="obs")
     if admission_id_o:
         st.markdown("---")
         render_observations_panel(admission_id_o)
 
 with tab_trigger:
-    admission_id_t, label_t = render_patient_selector()
+    admission_id_t, label_t = render_patient_selector(tab_key="trigger")
     if admission_id_t:
         st.markdown("---")
         render_trigger_alerts(admission_id_t)
