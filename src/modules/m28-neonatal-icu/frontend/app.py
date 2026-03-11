@@ -132,28 +132,151 @@ with tab_trigger:
 
 # Tab 5 — DB Explorer
 with tab_db:
-    st.subheader("🗄️ Database Explorer")
-    sub1, sub2 = st.tabs(["📅 Daily Admissions View", "🔧 Monitoring Devices"])
+    st.subheader("🗄️ Database Explorer — All Collections & Relations")
+    st.caption("Browse every MongoDB collection from your ER diagram and the simulated Views (aggregation pipelines).")
 
-    with sub1:
-        st.caption("Simulates: `CREATE VIEW v_daily_admissions AS SELECT DATE(admission_date), COUNT(*) FROM nicu_admissions GROUP BY DATE`")
+    # ── 7 sub-tabs ──────────────────────────────────────────────────────
+    (
+        dbt1, dbt2, dbt3, dbt4, dbt5, dbt6, dbt7
+    ) = st.tabs([
+        "👶 Neonates",
+        "🏥 NICU Admissions",
+        "👩‍⚕️ Observations",
+        "📊 Vital Signs",
+        "🔧 Devices",
+        "🔗 Neonate–Admission Join",
+        "📅 Daily Admissions",
+    ])
+
+    # ─ 1. Neonates ────────────────────────────────────────────────
+    with dbt1:
+        st.caption("🏛️ **Collection:** `neonates` | **PK:** `neonate_id`")
         try:
-            rows_d, pipeline_d = daily_admissions_view()
-            with st.expander("🔍 Show Aggregation Pipeline", expanded=False):
-                import json
-                st.code(json.dumps(pipeline_d, indent=2, default=str), language="json")
-            if rows_d:
-                st.dataframe(pd.DataFrame(rows_d), use_container_width=True, hide_index=True)
+            from backend.admissions import get_all_neonates
+            docs, raw_q = get_all_neonates()
+            if docs:
+                df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore")
+                # Format date
+                if "dob" in df.columns:
+                    df["dob"] = pd.to_datetime(df["dob"]).dt.strftime("%Y-%m-%d")
+                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.caption(f"{len(df)} records")
+            else:
+                st.info("No records.")
         except Exception as e:
             st.error(str(e))
 
-    with sub2:
-        st.markdown("##### Monitoring Devices")
+    # ─ 2. NICU Admissions ──────────────────────────────────────────
+    with dbt2:
+        st.caption("🏛️ **Collection:** `nicu_admissions` | **PK:** `admission_id` | **FK:** `neonate_id → neonates`")
         try:
-            devices, _ = get_all_devices()
-            if devices:
-                df_dev = pd.DataFrame(devices)
-                st.dataframe(df_dev.drop(columns=["_id"], errors="ignore"),
+            from backend.admissions import get_active_admissions
+            docs, _ = get_active_admissions()
+            if docs:
+                df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore")
+                if "admission_date" in df.columns:
+                    df["admission_date"] = pd.to_datetime(df["admission_date"]).dt.strftime("%Y-%m-%d %H:%M")
+                # Highlight FK column
+                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.caption(f"{len(df)} records | FK `neonate_id` references `neonates.neonate_id`")
+            else:
+                st.info("No records.")
+        except Exception as e:
+            st.error(str(e))
+
+    # ─ 3. Nurse Observations ──────────────────────────────────────
+    with dbt3:
+        st.caption("🏛️ **Collection:** `nurse_observations` | **PK:** `observation_id` | **FK:** `admission_id → nicu_admissions`")
+        try:
+            from backend.observations import get_all_observations
+            docs, _ = get_all_observations()
+            if docs:
+                df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore")
+                if "observation_time" in df.columns:
+                    df["observation_time"] = pd.to_datetime(df["observation_time"]).dt.strftime("%Y-%m-%d %H:%M")
+                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.caption(f"{len(df)} records | FK `admission_id` references `nicu_admissions.admission_id`")
+            else:
+                st.info("No records.")
+        except Exception as e:
+            st.error(str(e))
+
+    # ─ 4. Vital Signs Records ────────────────────────────────────
+    with dbt4:
+        st.caption("🏛️ **Collection:** `vital_signs_records` | **PK:** `record_id` | **FK:** `admission_id`, `device_id`")
+        try:
+            from backend.vitals import get_all_vitals
+            docs, _ = get_all_vitals()
+            if docs:
+                df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore")
+                if "record_time" in df.columns:
+                    df["record_time"] = pd.to_datetime(df["record_time"]).dt.strftime("%Y-%m-%d %H:%M")
+                df = df.sort_values("record_time", ascending=False).reset_index(drop=True) if "record_time" in df.columns else df
+                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.caption(f"{len(df)} records | FKs: `admission_id` → `nicu_admissions`, `device_id` → `monitoring_devices`")
+            else:
+                st.info("No records.")
+        except Exception as e:
+            st.error(str(e))
+
+    # ─ 5. Monitoring Devices ──────────────────────────────────────
+    with dbt5:
+        st.caption("🏛️ **Collection:** `monitoring_devices` | **PK:** `device_id`")
+        try:
+            docs, _ = get_all_devices()
+            if docs:
+                df = pd.DataFrame(docs).drop(columns=["_id"], errors="ignore")
+                if "last_calibrated" in df.columns:
+                    df["last_calibrated"] = pd.to_datetime(df["last_calibrated"]).dt.strftime("%Y-%m-%d")
+                st.dataframe(df, use_container_width=True, hide_index=True)
+                st.caption(f"{len(df)} records")
+            else:
+                st.info("No records.")
+        except Exception as e:
+            st.error(str(e))
+
+    # ─ 6. Neonate–Admission Relationship (simulated SQL JOIN) ──────────────
+    with dbt6:
+        st.caption("🔗 **Simulates SQL JOIN:** `nicu_admissions LEFT JOIN neonates ON neonate_id` via `$lookup`")
+        st.code(
+            "SELECT a.admission_id, n.name, n.gestational_age_weeks, n.birth_weight_g,\n"
+            "       a.bed_no, a.diagnosis, a.status\n"
+            "FROM nicu_admissions a\n"
+            "LEFT JOIN neonates n ON a.neonate_id = n.neonate_id",
+            language="sql",
+        )
+        try:
+            rows, pipeline = neonate_admission_join_view()
+            with st.expander("🔍 MongoDB Aggregation Pipeline", expanded=False):
+                import json
+                st.code(json.dumps(pipeline, indent=2, default=str), language="json")
+            if rows:
+                df = pd.DataFrame(rows)
+                if "admission_date" in df.columns:
+                    df["admission_date"] = pd.to_datetime(df["admission_date"]).dt.strftime("%Y-%m-%d")
+                st.dataframe(df.drop(columns=["_id"], errors="ignore"),
                              use_container_width=True, hide_index=True)
+                st.caption(f"{len(df)} joined records")
+        except Exception as e:
+            st.error(str(e))
+
+    # ─ 7. Daily Admissions Aggregation (simulated View) ─────────────────
+    with dbt7:
+        st.caption("📅 **Simulates SQL View:** `GROUP BY DATE(admission_date)` via `$group`")
+        st.code(
+            "CREATE VIEW v_daily_admissions AS\n"
+            "SELECT DATE(admission_date) AS day, COUNT(*) AS total\n"
+            "FROM nicu_admissions GROUP BY DATE(admission_date)",
+            language="sql",
+        )
+        try:
+            rows_d, pipeline_d = daily_admissions_view()
+            with st.expander("🔍 MongoDB Aggregation Pipeline", expanded=False):
+                import json
+                st.code(json.dumps(pipeline_d, indent=2, default=str), language="json")
+            if rows_d:
+                df_d = pd.DataFrame(rows_d)
+                st.dataframe(df_d, use_container_width=True, hide_index=True)
+                st.bar_chart(df_d.set_index(df_d.columns[0])[df_d.columns[1]] if len(df_d.columns) >= 2 else df_d)
         except Exception as e:
             st.error(str(e))
