@@ -135,22 +135,21 @@ with tab_db:
     st.subheader("🗄️ Database Explorer — All Collections & Relations")
     st.caption("Browse every MongoDB collection from your ER diagram and the simulated Views (aggregation pipelines).")
 
-    # ── 7 sub-tabs ──────────────────────────────────────────────────────
+    # ── 6 sub-tabs ──────────────────────────────────────────────────────
     (
-        dbt1, dbt2, dbt3, dbt4, dbt5, dbt6, dbt7
+        dbt1, dbt2, dbt3, dbt4, dbt5, dbt6
     ) = st.tabs([
-        "👶 Neonates",
-        "🏥 NICU Admissions",
-        "👩‍⚕️ Observations",
-        "📊 Vital Signs",
-        "🔧 Devices",
-        "🔗 Neonate–Admission Join",
-        "📅 Daily Admissions",
+        "Neonate",
+        "NICU_ADMISSION",
+        "Nurse_Observation",
+        "Vital_Signs_Record",
+        "Monitoring_Device",
+        "Admitted_to (Relation)",
     ])
 
-    # ─ 1. Neonates ────────────────────────────────────────────────
+    # ─ 1. Neonate ────────────────────────────────────────────────
     with dbt1:
-        st.caption("🏛️ **Collection:** `neonates` | **PK:** `neonate_id`")
+        st.caption("🏛️ **Entity:** `Neonate` | **PK:** `neonate_id`")
         try:
             from backend.admissions import get_all_neonates
             docs, raw_q = get_all_neonates()
@@ -166,9 +165,9 @@ with tab_db:
         except Exception as e:
             st.error(str(e))
 
-    # ─ 2. NICU Admissions ──────────────────────────────────────────
+    # ─ 2. NICU_ADMISSION ──────────────────────────────────────────
     with dbt2:
-        st.caption("🏛️ **Collection:** `nicu_admissions` | **PK:** `admission_id` | **FK:** `neonate_id → neonates`")
+        st.caption("🏛️ **Entity:** `NICU_ADMISSION` | **PK:** `admission_id` | **Relation:** `Admitted_to (Neonate)`")
         try:
             from backend.admissions import get_active_admissions
             docs, _ = get_active_admissions()
@@ -184,9 +183,9 @@ with tab_db:
         except Exception as e:
             st.error(str(e))
 
-    # ─ 3. Nurse Observations ──────────────────────────────────────
+    # ─ 3. Nurse_Observation ──────────────────────────────────────
     with dbt3:
-        st.caption("🏛️ **Collection:** `nurse_observations` | **PK:** `observation_id` | **FK:** `admission_id → nicu_admissions`")
+        st.caption("🏛️ **Entity:** `Nurse_Observation` | **PK:** `observation_id` | **Relation:** `Observed_in (NICU_ADMISSION)`")
         try:
             from backend.observations import get_all_observations
             docs, _ = get_all_observations()
@@ -201,9 +200,9 @@ with tab_db:
         except Exception as e:
             st.error(str(e))
 
-    # ─ 4. Vital Signs Records ────────────────────────────────────
+    # ─ 4. Vital_Signs_Record ────────────────────────────────────
     with dbt4:
-        st.caption("🏛️ **Collection:** `vital_signs_records` | **PK:** `record_id` | **FK:** `admission_id`, `device_id`")
+        st.caption("🏛️ **Entity:** `Vital_Signs_Record` | **PK:** `record_id` | **Relations:** `Monitored_by`, `Generated_by`")
         try:
             from backend.vitals import get_all_vitals
             docs, _ = get_all_vitals()
@@ -219,9 +218,9 @@ with tab_db:
         except Exception as e:
             st.error(str(e))
 
-    # ─ 5. Monitoring Devices ──────────────────────────────────────
+    # ─ 5. Monitoring_Device ──────────────────────────────────────
     with dbt5:
-        st.caption("🏛️ **Collection:** `monitoring_devices` | **PK:** `device_id`")
+        st.caption("🏛️ **Entity:** `Monitoring_Device` | **PK:** `device_id` | **Relation:** `Generated_by`")
         try:
             docs, _ = get_all_devices()
             if docs:
@@ -235,9 +234,9 @@ with tab_db:
         except Exception as e:
             st.error(str(e))
 
-    # ─ 6. Neonate–Admission Relationship (simulated SQL JOIN) ──────────────
+    # ─ 6. Admitted_to (Relation View) ──────────────
     with dbt6:
-        st.caption("🔗 **Simulates SQL JOIN:** `nicu_admissions LEFT JOIN neonates ON neonate_id` via `$lookup`")
+        st.caption("🔗 **Relation:** `Admitted_to` (simulated SQL JOIN between Neonate and NICU_ADMISSION)")
         st.code(
             "SELECT a.admission_id, n.name, n.gestational_age_weeks, n.birth_weight_g,\n"
             "       a.bed_no, a.diagnosis, a.status\n"
@@ -260,23 +259,3 @@ with tab_db:
         except Exception as e:
             st.error(str(e))
 
-    # ─ 7. Daily Admissions Aggregation (simulated View) ─────────────────
-    with dbt7:
-        st.caption("📅 **Simulates SQL View:** `GROUP BY DATE(admission_date)` via `$group`")
-        st.code(
-            "CREATE VIEW v_daily_admissions AS\n"
-            "SELECT DATE(admission_date) AS day, COUNT(*) AS total\n"
-            "FROM nicu_admissions GROUP BY DATE(admission_date)",
-            language="sql",
-        )
-        try:
-            rows_d, pipeline_d = daily_admissions_view()
-            with st.expander("🔍 MongoDB Aggregation Pipeline", expanded=False):
-                import json
-                st.code(json.dumps(pipeline_d, indent=2, default=str), language="json")
-            if rows_d:
-                df_d = pd.DataFrame(rows_d)
-                st.dataframe(df_d, use_container_width=True, hide_index=True)
-                st.bar_chart(df_d.set_index(df_d.columns[0])[df_d.columns[1]] if len(df_d.columns) >= 2 else df_d)
-        except Exception as e:
-            st.error(str(e))
