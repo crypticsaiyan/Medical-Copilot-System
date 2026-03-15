@@ -96,9 +96,9 @@ def render_vitals_chart(admission_id: str) -> None:
             s = summary[0]
             agg_data = {
                 "Metric": ["Heart Rate","SpO2","Resp Rate"],
-                "Min":  [s.get("min_heart_rate","—"), s.get("min_spo2","—"), "—"],
-                "Max":  [s.get("max_heart_rate","—"), "100", "—"],
-                "Avg":  [round(s.get("avg_heart_rate",0),1), round(s.get("avg_spo2",0),1), round(s.get("avg_respiratory_rate",0),1)],
+                "Min":  [str(s.get("min_heart_rate","—")), str(s.get("min_spo2","—")), "—"],
+                "Max":  [str(s.get("max_heart_rate","—")), "100", "—"],
+                "Avg":  [str(round(s.get("avg_heart_rate",0),1)), str(round(s.get("avg_spo2",0),1)), str(round(s.get("avg_respiratory_rate",0),1))],
             }
             st.dataframe(pd.DataFrame(agg_data), use_container_width=True, hide_index=True)
 
