@@ -12,11 +12,12 @@ client = MongoClient(MONGO_URI)
 db = client["nicu_monitoring_system"]
 
 # Collections
-growth_parameters_collection = db["growth_parameters"]
-monitoring_device_collection = db["monitoring_device"]
 neonates_collection = db["neonates"]
 nicu_admissions_collection = db["nicu_admissions"]
-nurse_observation_collection = db["nurse_observation"]
+growth_parameters_collection = db["growth_parameters"]
+feeding_logs_collection = db["feeding_logs"]
+gestational_age_ref_collection = db["gestational_age_reference"]
 vital_signs_collection = db["vital_signs"]
+monitoring_device_collection = db["monitoring_device"]
 
 print("MongoDB Connected Successfully")
