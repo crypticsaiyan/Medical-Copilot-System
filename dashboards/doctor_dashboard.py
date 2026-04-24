@@ -4,6 +4,9 @@ from components.sidebar import sidebar
 from components.charts import patient_line_chart, appointment_donut_chart
 import matplotlib.pyplot as plt
 
+DOCTOR_SIDEBAR_STATE_KEY = "doctor_sidebar_selection"
+DOCTOR_SIDEBAR_WIDGET_KEY = "doctor_sidebar_menu"
+
 # All categories and their modules
 CATEGORIES = {
     "A - Patient Clinical Data": {
@@ -130,8 +133,9 @@ def doctor_dashboard():
     st.session_state.setdefault("view", "main")
     st.session_state.setdefault("selected_category", None)
     st.session_state.setdefault("selected_module", None)
+    st.session_state.setdefault(DOCTOR_SIDEBAR_STATE_KEY, "Dashboard")
 
-    # Sidebar - but don't automatically trigger category view
+    # Sidebar
     selected = sidebar([
         "Dashboard",
         "A - Patient Clinical Data",
@@ -143,12 +147,17 @@ def doctor_dashboard():
         "G - Compliance & Security",
         "H - Supply Chain",
         "I - Analytics & Reporting"
-    ])
+    ], state_key=DOCTOR_SIDEBAR_STATE_KEY, widget_key=DOCTOR_SIDEBAR_WIDGET_KEY)
 
-    # Only change view if a category is explicitly selected AND it's not "Dashboard"
-    if selected != "Dashboard" and selected in CATEGORIES and st.session_state.view == "main":
-        # Don't auto-navigate, let button clicks handle it
-        pass
+    # Handle sidebar selection
+    if selected != "Dashboard" and selected in CATEGORIES:
+        st.session_state.selected_category = selected
+        st.session_state.view = "category"
+        st.session_state.selected_module = None
+    elif selected == "Dashboard":
+        st.session_state.view = "main"
+        st.session_state.selected_category = None
+        st.session_state.selected_module = None
 
     # ROUTER
     if st.session_state.view == "category":
@@ -349,6 +358,7 @@ def show_category_view():
     st.divider()
     if st.button("⬅ Back to Dashboard"):
         st.session_state.view = "main"
+        st.session_state[DOCTOR_SIDEBAR_STATE_KEY] = "Dashboard"
         st.rerun()
 
 def show_module_detail():

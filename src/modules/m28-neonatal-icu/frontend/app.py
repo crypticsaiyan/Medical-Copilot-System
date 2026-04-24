@@ -15,13 +15,17 @@ if str(_MODULE_ROOT) not in sys.path:
 
 import pandas as pd
 import streamlit as st
+from streamlit.errors import StreamlitAPIException
 
-st.set_page_config(
-    page_title="M28 — NICU Monitor",
-    page_icon="🏥",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
+try:
+    st.set_page_config(
+        page_title="M28 — NICU Monitor",
+        page_icon="🏥",
+        layout="wide",
+        initial_sidebar_state="expanded",
+    )
+except StreamlitAPIException:
+    pass
 
 st.markdown("""
 <style>

@@ -1,7 +1,14 @@
 # dashboards/patient_dashboard.py
 import streamlit as st
+import runpy
+from pathlib import Path
 from components.sidebar import sidebar
 from components.charts import patient_line_chart, appointment_donut_chart
+
+PATIENT_SIDEBAR_STATE_KEY = "patient_sidebar_selection"
+PATIENT_SIDEBAR_WIDGET_KEY = "patient_sidebar_menu"
+NEONATAL_FRONTEND_FLAG_KEY = "show_neonatal_frontend"
+NEONATAL_FRONTEND_PATH = Path(__file__).resolve().parents[1] / "src/modules/m28-neonatal-icu/frontend/app.py"
 
 # All categories and their modules
 CATEGORIES = {
@@ -133,6 +140,20 @@ def patient_dashboard():
     st.session_state.setdefault("view", "main")
     st.session_state.setdefault("selected_category", None)
     st.session_state.setdefault("selected_module", None)
+    st.session_state.setdefault(PATIENT_SIDEBAR_STATE_KEY, "Dashboard")
+    st.session_state.setdefault(NEONATAL_FRONTEND_FLAG_KEY, False)
+
+    if st.session_state[NEONATAL_FRONTEND_FLAG_KEY]:
+        if st.button("⬅ Back to Patient Dashboard"):
+            st.session_state[NEONATAL_FRONTEND_FLAG_KEY] = False
+            st.rerun()
+
+        if not NEONATAL_FRONTEND_PATH.exists():
+            st.error("Neonatal frontend entrypoint was not found.")
+            return
+
+        runpy.run_path(str(NEONATAL_FRONTEND_PATH), run_name="__main__")
+        return
 
     # Sidebar
     selected = sidebar([
@@ -146,7 +167,7 @@ def patient_dashboard():
         "G - Secure EHR & Access Control",
         "H - Laboratory Test Interpretation",
         "I - Integrated Capstone Projects"
-    ])
+    ], state_key=PATIENT_SIDEBAR_STATE_KEY, widget_key=PATIENT_SIDEBAR_WIDGET_KEY)
 
     # Handle sidebar selection
     if selected != "Dashboard" and selected in CATEGORIES:
@@ -347,14 +368,19 @@ def show_category_view():
                 mcol2.metric("Records", f"{records:,}")
                 
                 if st.button("→", key=f"mod_{code}", use_container_width=True):
-                    st.session_state.selected_module = module
-                    st.session_state.view = "module"
-                    st.rerun()
+                    if code == "E4":
+                        st.session_state[NEONATAL_FRONTEND_FLAG_KEY] = True
+                        st.rerun()
+                    else:
+                        st.session_state.selected_module = module
+                        st.session_state.view = "module"
+                        st.rerun()
                 st.markdown("---")
     
     st.divider()
     if st.button("⬅ Back to Dashboard"):
         st.session_state.view = "main"
+        st.session_state[PATIENT_SIDEBAR_STATE_KEY] = "Dashboard"
         st.rerun()
 
 def show_module_detail():
